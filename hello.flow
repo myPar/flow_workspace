@@ -1,0 +1,10 @@
+import runtime;
+
+// input array
+inputArr : [int] = [1, 2, 3, 4, 5, 6];
+
+main() {
+	//b = "d";
+	println(inputArr);
+	println(map(inputArr, \i -> cast (i : int -> string)));
+}

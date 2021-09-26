@@ -1,0 +1,36 @@
+import runtime;
+import ds/tree;
+
+// set array data to tree
+buildTree(input_array : [int]) -> Tree<int, [int]>;
+// get idx of value m-n in input array (n-current array value)
+getIndices(value : int, tree : Tree<int, [int]>, m : int) -> [int];
+// get result array of idnices pairs
+getResults(intpur_array : [int], tree : Tree<int, [int]>, m : int) -> [Pair<int, int>];
+
+buildTree(input_array) {
+    foldi(input_array, makeTree(), \idx, tree, item -> treePushToArrayValue(tree, item, idx))
+}
+
+getIndices(value, tree, m) {
+    res: Maybe<[int]> = lookupTree(tree, m - value);
+    res ?? res : [];
+}
+
+getResults(input_array, tree, m) {
+    doubleIdxArray: [[int]] = map(input_array, \item -> getIndices(item, tree, m));
+    result: [Pair<int, int>] = foldi(doubleIdxArray, [], \idx, init, curArr -> concat(map(curArr, \item -> Pair(idx, item)), init));
+    result
+}
+
+main() {    
+    // input array
+    input_array: [int] = [4, 6, 13, 6, 44];
+    // m value
+    m : int = 17;
+    // bynary search tree (to put array in it)
+    tree: Tree<int, [int]> = buildTree(input_array);
+
+    println(tree);
+    println(getResults(input_array, tree, m));
+}

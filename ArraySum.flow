@@ -1,0 +1,9 @@
+import runtime;
+
+inputArray: [int] = [1, 2, 3, 4, 5, 6];
+
+main() {
+	//b = "d";
+	println(inputArray);
+	println(fold(inputArray, 0, \sum,item -> sum + item));
+}

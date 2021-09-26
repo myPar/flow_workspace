@@ -1,0 +1,39 @@
+import runtime;
+
+// 'warapper' function for fibRec
+Fib : (lastFibIdx : int) -> [int];
+
+// fibonachy row function calculation
+fib : (n : int, lastFibNumber: int, result: ref [int]) -> [int];
+
+Fib(lastIdx) {
+    assert(lastIdx >= 0, "idx of last fib number should be more or equal 0");
+    //result array
+    result : ref [int] = ref [0, 1];
+
+    fib(2, lastIdx, result)
+}
+
+fib (n, lastFibNumber, result) {
+    if (lastFibNumber == 0) {
+        [0];
+        {}
+    }
+    if (lastFibNumber == 1) {
+        [0, 1];
+        {}
+    }
+    if (n <= lastFibNumber) {
+        refArrayPush(result, ^result[n-1] + ^result[n-2]);
+        fib(n + 1, lastFibNumber, result)
+    }
+    else {
+        ^result
+    }
+}
+
+main() {
+    println(Fib(1));
+    println(Fib(10));
+    println(Fib(3));
+}

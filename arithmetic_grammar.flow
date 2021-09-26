@@ -1,0 +1,113 @@
+import lingo/pegcode/driver;
+import runtime;
+
+// set structures
+Exp ::= Int, Var, Add, Sub, Mul, Div;
+        Int : (i : int);
+        Var : (v : string);
+        Add : (e1 : Exp, e2 : Exp);
+        Sub : (e1 : Exp, e2 : Exp);
+        Mul : (e1 : Exp, e2 : Exp);
+        Div : (e1 : Exp, e2 : Exp);
+
+// get string representation of expresion
+expr_to_string(expr : Exp) -> string {
+    switch(expr) {
+        Add(e1, e2): {
+            "(" + expr_to_string(e1) + "+" + expr_to_string(e2) + ")"
+        }
+        Sub(e1, e2): {
+            "(" + expr_to_string(e1) + "-" + expr_to_string(e2) + ")"
+        }
+        Mul(e1, e2): {
+            "(" + expr_to_string(e1) + "*" + expr_to_string(e2) + ")"
+        }
+        Div(e1, e2): {
+            "(" + expr_to_string(e1) + "/" + expr_to_string(e2) + ")"
+        }
+        Int(i): {
+            i2s(i)
+        }
+        Var(v): {
+            v                                
+        }
+    }
+}
+
+// expression calculation method
+calc_expr(expr : Exp, tree: Tree<string, int>) -> int {
+    switch(expr) {
+        Add(e1, e2): {
+            calc_expr(e1, tree) + calc_expr(e2, tree)
+        }
+        Sub(e1, e2): {
+            calc_expr(e1, tree) - calc_expr(e2, tree)
+        }
+        Mul(e1, e2): {
+            calc_expr(e1, tree) * calc_expr(e2, tree)
+        }
+        Div(e1, e2): {
+            calc_expr(e1, tree) / calc_expr(e2, tree)
+        }
+        Int(i): {
+            i
+        }
+        Var(v): {
+            lookupTreeDef(tree, v, 0)                                
+        }
+    }            
+}
+
+// getting arg list from the expression
+get_arg_list(expr: Exp) -> [string] {
+    switch(expr) {
+        Add(e1, e2): {
+            concat(get_arg_list(e1), get_arg_list(e2))
+        }
+        Sub(e1, e2): {
+            concat(get_arg_list(e1), get_arg_list(e2))
+        }
+        Mul(e1, e2): {
+            concat(get_arg_list(e1), get_arg_list(e2))
+        }
+        Div(e1, e2): {
+            concat(get_arg_list(e1), get_arg_list(e2))
+        }
+        Int(i): {
+            []
+        }
+        Var(v): {
+            [v]
+        }
+    }            
+}
+
+// print var-value pairs function
+print_var_tree(var_tree : Tree<string, int>) -> void {
+    traversePreOrder(var_tree, \key, value -> println(key + " : " + i2s(value)));
+}
+
+// key-value assosiated container (key - var name; value - var value)
+build_var_tree(variables : [string], input_file_path : string) -> Tree<string, int> {
+    // get file data
+    data : string = getFileContent(input_file_path);
+    str_arr: [string] = strSplit(data, " ");
+    // init variables
+    foldi(variables, makeTree(), \idx, init, var -> setTree(init, var, s2i(str_arr[idx])));
+}
+
+// main calculate function
+calc(expr: Exp, input_file_path : string) -> int {
+    var_tree : Tree<string, int> = build_var_tree(get_arg_list(expr), input_file_path);
+    // print var values
+    print_var_tree(var_tree);
+    // calculate expression
+    calc_expr(expr, var_tree);
+}
+
+main() {
+    result = parsic(compilePegGrammar("#include arithmetic_grammar.lingo"), "((((aa+b)/(a-3))+25)*10)", defaultPegActions);
+    println(result);
+    println(expr_to_string(result));
+    println(calc(result, "input.txt"));
+}        
