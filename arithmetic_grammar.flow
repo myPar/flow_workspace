@@ -47,13 +47,27 @@ calc_expr(expr : Exp, tree: Tree<string, int>) -> int {
             calc_expr(e1, tree) * calc_expr(e2, tree)
         }
         Div(e1, e2): {
-            calc_expr(e1, tree) / calc_expr(e2, tree)
+            right : int = calc_expr(e2, tree);
+            if (right == 0) {
+                assert(false, "devision by zero");
+            }
+            calc_expr(e1, tree) / right
         }
         Int(i): {
             i
         }
         Var(v): {
-            lookupTreeDef(tree, v, 0)                                
+            result: Maybe<int> = lookupTree(tree, v);
+            // check is variable initialized
+            switch(result) {
+                None(): {
+                    assert(false, "variable " + v + " has not been initialized");
+                    0
+                }
+                Some(x): {
+                    result ?? result : 0;
+                }
+            }
         }
     }            
 }
@@ -106,8 +120,8 @@ calc(expr: Exp, input_file_path : string) -> int {
 }
 
 main() {
-    result = parsic(compilePegGrammar("#include arithmetic_grammar.lingo"), "((((aa+b)/(a-3))+25)*10)", defaultPegActions);
-    println(result);
-    println(expr_to_string(result));
-    println(calc(result, "input.txt"));
+    result = parsic(compilePegGrammar("#include arithmetic_grammar.lingo"), "((((a+b)/(a-3))+25)*10)", defaultPegActions);
+
+    var_tree : Tree<string, int> = build_var_tree(get_arg_list(result), "input.txt");
+    println(calc_expr(result, setTree(var_tree, "a", 3)));
 }        
