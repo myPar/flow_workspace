@@ -1,0 +1,19 @@
+import lingo/pegcode/driver;
+import runtime;
+
+myUnion ::= Struct1, Struct2;
+Struct1 : (i : int);
+Struct2 : (s : string);
+
+foo() {
+    println("hi");
+    true
+}
+
+main() {
+    un1 : myUnion = Struct1(10);
+    s : string = "aaa";
+    if (un1 == Struct1(10)) {
+        println("wrong")
+    }
+}

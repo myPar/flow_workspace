@@ -2,13 +2,18 @@ import lingo/pegcode/driver;
 import runtime;
 
 // set structures
-Exp ::= Int, Var, Add, Sub, Mul, Div;
+Exp ::= Int, Var, Add, Sub, Mul, Div, Pow;
         Int : (i : int);
         Var : (v : string);
         Add : (e1 : Exp, e2 : Exp);
         Sub : (e1 : Exp, e2 : Exp);
         Mul : (e1 : Exp, e2 : Exp);
         Div : (e1 : Exp, e2 : Exp);
+        Pow : (e1 : Exp, e2 : Int);
+
+
+// Fraction structure
+Frac: (num: int, denum : int);
 
 // get string representation of expresion
 expr_to_string(expr : Exp) -> string {
@@ -31,7 +36,90 @@ expr_to_string(expr : Exp) -> string {
         Var(v): {
             v                                
         }
+        Pow(e1, e2): {
+            "(" + expr_to_string(e1) + "^" + expr_to_string(e2) + ")"
+        }
     }
+}
+
+// arithmetic functions with fractal
+frac_sum(e1: Frac, e2 : Frac) -> Frac {
+    num = e1.num * e2.denum + e2.num * e1.denum;
+    denum = e1.denum * e2.denum;
+
+    Frac(num, denum);
+}
+frac_sub(e1: Frac, e2 : Frac) -> Frac {
+    num = e1.num * e2.denum - e2.num * e1.denum;
+    denum = e1.denum * e2.denum;
+
+    Frac(num, denum)
+}
+frac_mul(e1: Frac, e2 : Frac) -> Frac {
+    Frac(e1.num * e2.num, e1.denum * e2.denum)
+}
+frac_div(e1: Frac, e2 : Frac) -> Frac {
+    Frac(e1.num * e2.denum, e1.denum * e2.num)
+}
+
+// get power functions
+get_pow(arg: int, pow: int) -> int {
+    if (pow == 1) {
+        arg
+    }
+    else {
+        get_pow(arg, pow - 1) * arg
+    }
+}
+
+get_pow_frac(arg: Frac, pow: int) -> Frac {
+    if (pow == 1) {
+        arg
+    }
+    else {
+        frac_mul(get_pow_frac(arg, pow - 1), arg)
+    }
+}
+
+calc_expr_frac(expr : Exp, tree: Tree<string, int>) -> Frac {
+    switch(expr) {
+        Add(e1, e2): {
+            frac_sum(calc_expr_frac(e1, tree), calc_expr_frac(e2, tree))
+        }
+        Sub(e1, e2): {
+            frac_sub(calc_expr_frac(e1, tree), calc_expr_frac(e2, tree))
+        }
+        Mul(e1, e2): {
+            frac_mul(calc_expr_frac(e1, tree), calc_expr_frac(e2, tree))
+        }
+        Div(e1, e2): {
+            right : Frac = calc_expr_frac(e2, tree);
+            if (right.num == 0) {
+                assert(false, "devision by zero");
+            }
+            left : Frac = calc_expr_frac(e1, tree);
+            frac_div(left, right)
+        }
+        Int(i): {
+            Frac(i, 1)
+        }
+        Var(v): {
+            result: Maybe<int> = lookupTree(tree, v);
+            // check is variable initialized
+            switch(result) {
+                None(): {
+                    assert(false, "variable " + v + " has not been initialized");
+                    Frac(0, 0)
+                }
+                Some(x): {
+                    result ?? Frac(result, 1) : Frac(0, 0);
+                }
+            }
+        }
+        Pow(e1, e2): {
+            get_pow_frac(calc_expr_frac(e1, tree), e2.i)
+        }
+    }            
 }
 
 // expression calculation method
@@ -69,6 +157,252 @@ calc_expr(expr : Exp, tree: Tree<string, int>) -> int {
                 }
             }
         }
+        Pow(e1, e2): {
+            if (e2.i < 0) {
+                assert(false, "negative power")
+            }
+            get_pow(calc_expr(e1, tree), e2.i)    
+        }
+    }            
+}
+
+// check is expression a Var
+is_var(expr: Exp) {
+    switch(expr) {
+        Var(v): {
+            true
+        }
+        default: {
+            false
+        }
+    }
+}
+
+// check is expression a Int
+isInt(expr: Exp) {
+    switch(expr) {
+        Int(i): {
+            true
+        }
+        default: {
+            false
+        }
+    }
+}
+
+// structure getters:
+getInt(expr: Exp) -> Int {
+    switch (expr) {
+        Int(i): {
+            Int(i)            
+        }
+        default: {
+            assert(false, "not Int structure");
+            Int(0)
+        }
+    }
+}
+getVar(expr: Exp) -> Var {
+    switch (expr) {
+        Var(v): {
+            Var(v)
+        }
+        default: {
+            assert(false, "not Int structure");
+            Var("")
+        }
+    }
+}
+
+// calculate derivative in expression
+calc_derivative(expr: Exp) -> Exp {
+    simplified_expr : Exp = simplify_expr(expr);
+    simplify_expr(calc_derivative_simplified(simplified_expr))
+}
+
+// calculate derivative in simplified expression (no exceptions, no 0 of 1 powers, no zero in Add, Mul, right arg in Sub)
+calc_derivative_simplified(expr: Exp) -> Exp {
+    switch(expr) {
+        Add(e1, e2): {
+            Add(calc_derivative_simplified(e1), calc_derivative_simplified(e2))
+        }
+        Sub(e1, e2): {
+            Sub(calc_derivative_simplified(e1), calc_derivative_simplified(e2))
+        }
+        Mul(e1, e2): {
+            Add(Mul(calc_derivative_simplified(e1), e2), Mul(calc_derivative_simplified(e2), e1))
+        }
+        Div(e1, e2): {
+            Div(Sub(Mul(calc_derivative_simplified(e1), e2), Mul(calc_derivative_simplified(e2), e1)), Mul(e2, e2))
+        }
+        Int(i): {
+            Int(0)
+        }
+        Var(v): {
+            Int(1)
+        }
+        Pow(e1, e2): {
+            Pow(e1, Int(e2.i - 1))
+        }
+    }            
+}
+
+// simplify expression
+simplify_expr(expr : Exp) -> Exp {
+    switch(expr) {
+        Add(e1, e2): {
+            exp1 : Exp = simplify_expr(e1);
+            exp2 : Exp = simplify_expr(e2);
+
+            // const subexpresison calculation
+            if (isInt(exp1) && isInt(exp2)) {
+                exp1_struct = getInt(exp1);
+                exp2_struct = getInt(exp2);
+                
+                Int(exp1_struct.i + exp2_struct.i)
+            }
+            // check Add with zero
+            else if (isInt(exp1)) {
+                exp1_struct = getInt(exp1);
+                if (exp1_struct.i == 0) {
+                    exp2
+                }
+                else {
+                    Add(exp1, exp2)    
+                }
+            }
+            else if (isInt(exp2)) {
+                exp2_struct = getInt(exp2);
+
+                if (exp2_struct.i == 0) {
+                    exp1
+                }
+                else {
+                    Add(exp1, exp2)    
+                }
+            }
+            else {  
+                Add(exp1, exp2)         
+            }
+        }
+        Sub(e1, e2): {
+            exp1 : Exp = simplify_expr(e1);
+            exp2 : Exp = simplify_expr(e2);
+            
+            // const subexpresison calculation
+            if (isInt(exp1) && isInt(exp2)) {
+                exp1_struct = getInt(exp1);
+                exp2_struct = getInt(exp2);
+                
+                Int(exp1_struct.i - exp2_struct.i)
+            }
+            // check sub with zero
+            else if (isInt(exp2)) {
+                exp2_struct = getInt(exp2);
+                if (exp2_struct.i == 0) {
+                    exp1
+                }
+                else {
+                    Sub(exp1, exp2)    
+                }
+            }
+            else {
+                Sub(exp1, exp2)
+            }
+        }
+        Mul(e1, e2): {
+            exp1 : Exp = simplify_expr(e1);
+            exp2 : Exp = simplify_expr(e2);
+            
+            // const subexpresison calculation
+            if (isInt(exp1) && isInt(exp2)) {
+                exp1_struct = getInt(exp1);
+                exp2_struct = getInt(exp2);
+
+                Int(exp1_struct.i * exp2_struct.i)
+            }
+            // check mul on zero
+            else if (isInt(exp1)) {
+                exp1_struct = getInt(exp1);
+                if (exp1_struct.i == 0) {
+                    Int(0)
+                }
+                else {
+                    Mul(exp1, exp2)    
+                }
+            }
+            else if (isInt(exp2)) {
+                exp2_struct = getInt(exp2);
+
+                if (exp2_struct.i == 0) {
+                    Int(0)
+                }
+                else {
+                    Mul(exp1, exp2)    
+                }
+            }
+            else {
+                Mul(exp1, exp2)
+            }
+        }
+        Div(e1, e2): {
+            exp1 : Exp = simplify_expr(e1);
+            exp2 : Exp = simplify_expr(e2);
+            
+            // check devision by zero
+            if (isInt(exp2)) {
+                exp2_struct = getInt(exp2);
+
+                if (exp2_struct.i == 0) {
+                    assert(false, "division by zero");
+                    Int(0)
+                }
+                else if (isInt(exp1) && isInt(exp2)) {
+                    exp1_struct = getInt(exp1);
+
+                    Int(exp1_struct.i / exp2_struct.i)
+                }
+                else {
+                    Div(exp1, exp2)
+                }                    
+            }
+            else if (exp1 == Int(0)) {
+                Int(0)
+            }
+            else {
+                Div(exp1, exp2)
+            }
+        }
+        Int(i): {
+            expr
+        }
+        Var(v): {
+            expr
+        }
+        Pow(e1, e2): {
+            exp1 : Exp = simplify_expr(e1);
+            exp2 : Int = e2;
+            
+            // const subexpression calculation
+            if (isInt(exp1) && isInt(exp2)) {
+                exp1_struct = getInt(exp1);
+                exp2_struct = getInt(exp2);
+                Int(get_pow(exp1_struct.i, exp2_struct.i))
+            }
+            else if (exp2.i == 1) {
+                exp1
+            }
+            else if (exp2.i == 0) {
+                Int(0)
+            }
+            else if (exp2.i < 0) {
+                assert(false, "negative power");
+                Int(0)
+            }
+            else {
+                Pow(exp1, exp2)
+            }
+        }
     }            
 }
 
@@ -92,6 +426,9 @@ get_arg_list(expr: Exp) -> [string] {
         }
         Var(v): {
             [v]
+        }
+        Pow(e1, e2): {
+            get_arg_list(e1)
         }
     }            
 }
@@ -120,8 +457,18 @@ calc(expr: Exp, input_file_path : string) -> int {
 }
 
 main() {
-    result = parsic(compilePegGrammar("#include arithmetic_grammar.lingo"), "((((a+b)/(a-3))+25)*10)", defaultPegActions);
+    result = parsic(compilePegGrammar("#include arithmetic_grammar.lingo"), "(5+((x^4)+(x^2)))", defaultPegActions);
 
     var_tree : Tree<string, int> = build_var_tree(get_arg_list(result), "input.txt");
-    println(calc_expr(result, setTree(var_tree, "a", 3)));
+    println(result);
+    println(simplify_expr(result));
+    println(calc_derivative(result))
+/*  println(calc_expr(result, setTree(var_tree, "a", 4)));
+    println(calc_expr_frac(result, setTree(var_tree, "a", 4)));
+
+    result2 = parsic(compilePegGrammar("#include arithmetic_grammar.lingo"), "(((2+4)/a)^3)", defaultPegActions);
+    var_tree2 : Tree<string, int> = build_var_tree(get_arg_list(result2), "input.txt");
+    println(calc_expr(result2, setTree(var_tree2, "a", 2)));
+    println(calc_expr_frac(result2, setTree(var_tree2, "a", 2)));   
+*/
 }        

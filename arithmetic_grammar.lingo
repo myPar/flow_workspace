@@ -1,10 +1,9 @@
-
-
 expr = var:e {:e} | int:e {:e}  | "(" expr:e1 "+" expr:e2 ")" {Add(:e1, :e2)} 
                    | "(" expr:e1 "-" expr:e2 ")" {Sub(:e1, :e2)}
                    | "(" expr:e1 "*" expr:e2 ")" {Mul(:e1, :e2)}
-                   | "(" expr:e1 "/" expr:e2 ")" {Div(:e1, :e2)};
+                   | "(" expr:e1 "/" expr:e2 ")" {Div(:e1, :e2)}
+                   | "(" expr:e1 "^" int:e2 ")" {Pow(:e1, :e2)};
 
-int = ('1'-'9' digit* | '0') $d {Int(s2i($d))};
+int = ('-'? '1'-'9' digit* | '0') $d {Int(s2i($d))};
 digit = '0'-'9';
 var = ('a'-'z')+ $d {Var($d)};
